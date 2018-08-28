@@ -5,9 +5,9 @@ from time import sleep
 
 ### setup ###
 # make directories 
-main_dir = ("./tests/test")
+main_dir = ("./tests/test/")
 a_dir = make_dir(main_dir+"accepted/") 
-r_dir = make_dir(main_dir+"./rejected/")
+r_dir = make_dir(main_dir+"rejected/")
 output_dir = make_dir("./output/")
 ids = load_json(output_dir+"scraped")
 add_download_opener()
@@ -44,6 +44,8 @@ def main():
         
         if process_tags:
             add_tags(output_dir+"good_tags", info)
+        
+        sleep(900)
 
 if __name__ == "__main__":
     try:
