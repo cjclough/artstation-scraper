@@ -5,7 +5,7 @@ from time import sleep
 
 ### setup ###
 # make directories 
-main_dir = ("./test/")
+main_dir = ("./tests/test")
 a_dir = make_dir(main_dir+"accepted/") 
 r_dir = make_dir(main_dir+"./rejected/")
 output_dir = make_dir("./output/")
@@ -17,7 +17,7 @@ def main():
     counter = 1
     process_tags = False
     parse_tags = False
-    blacklist = load_list(output_dir+"blacklist_scifi")
+    blacklist = load_list(output_dir+"blacklist")
     
     while True:
         valid = False
