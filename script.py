@@ -4,9 +4,11 @@ from utillib import *
 from time import sleep
 
 ### setup ###
+
+run_dir = input("Enter name of test directory: ")
 # make directories 
-main_dir = ("./tests/test/")
-a_dir = make_dir(main_dir+"accepted/") 
+main_dir = ("./tests/"+run_dir+"/")
+a_dir = make_dir(main_dir+"accepted/")
 r_dir = make_dir(main_dir+"rejected/")
 output_dir = make_dir("./output/")
 ids = load_json(output_dir+"scraped")
@@ -23,20 +25,13 @@ def main():
         valid = False
         while not valid:
             artwork = scrape_image(ids)
-            valid = validate_image(artwork, ids, blacklist, r_dir, process_tags) 
+            valid, info = validate_image(artwork, ids, blacklist, r_dir, process_tags) 
 
         with open(a_dir + "permalinks.txt", 'a') as f:
             f.write(artwork["permalink"] + "\n")
 
-        # load the artwork's .json
-        request = Request("https://www.artstation.com/projects/" + artwork["hash_id"] + ".json", headers={'User-Agent': 'Mozilla/5.0'})
-        response = urllib.request.urlopen(request) 
-            
-        with response as r:
-            info = json.load(r)
-
-        artist = re.sub('[^A-Za-z0-9]+', '_', artwork["user"]["full_name"].lower())
-        title = re.sub('[^A-Za-z0-9]+', '_', artwork["title"].lower())
+        artist = re.sub('[^A-Za-z0-9]+', '_', info["user"]["full_name"].lower())
+        title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
         urllib.request.urlretrieve(info["assets"][0]["image_url"], a_dir+str(counter)+"_"+artist+"-"+title+".jpg")
         counter += 1
 
@@ -45,7 +40,7 @@ def main():
         if process_tags:
             add_tags(output_dir+"good_tags", info)
         
-        sleep(900)
+        sleep(500)
 
 if __name__ == "__main__":
     try:

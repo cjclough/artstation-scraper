@@ -24,21 +24,21 @@ def scrape_image(ids):
 # ---------------------- #
 def get_artworks():
     categories = ["environments", "matte_painting", "mech", "storytelling", "science_fiction", "surreal"]
-    sortings = ["trending", "picks"]
+    sortings = ["&sorting=trending", "&sorting=picks", "&randomize=true"]
     
     category = categories[random.randint(0,5)]
-    sorting = sortings[random.randint(0,1)]
+    sorting = sortings[random.randint(0,2)]
     page = random.randint(1,10)
 
     try:
-        request = Request("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+"&sorting="+sorting, headers={'User-Agent': 'Mozilla/5.0'})
+        request = Request("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+sorting, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(request)
     except urllib.error.HTTPError as err:
         print(err)
         exit()
 
     with response as r:
-        return json.load(r)    
+        return json.load(r)   
 # ---------------------- #
 def validate_image(artwork, ids, blacklist, r_dir, process_tags):
     bad_categories = ["Animation", "Architecture", "Architectural Visualization", "Comic Art", 
@@ -70,8 +70,7 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
             ids[artwork["hash_id"]] = artwork["id"]
 
             print ("Bad artwork.")
-
-            return False    
+            return False, info    
 
     if info["adult_content"]:
         ids[artwork["hash_id"]] = artwork["id"]
@@ -79,11 +78,11 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
         _file = open(r_dir+"permalinks.txt", "a")
         _file.write(artwork["permalink"] + "\n")
 
-        title = re.sub('[^A-Za-z0-9]+', '_', artwork["title"].lower())
+        title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
         urllib.request.urlretrieve(info["assets"][0]["image_url"], r_dir + title + ".jpg")
 
         print ("Bad artwork.")
-        return False
+        return False, info
 
     tags = get_tags(info)
 
@@ -94,17 +93,17 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
             _file = open(r_dir+"permalinks.txt", "a")
             _file.write(artwork["permalink"] + "\n")
 
-            title = re.sub('[^A-Za-z0-9]+', '_', artwork["title"].lower())
+            title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
             urllib.request.urlretrieve(info["assets"][0]["image_url"], r_dir + title + ".jpg")
 
             if process_tags: 
                 add_tags("./output/bad_tags", info)
 
             print ("Bad artwork.")
-            return False
+            return False, info
 
     print("Artwork validated.")
-    return True
+    return True, info
 # ---------------------- #
 def add_download_opener():
     opener=urllib.request.build_opener()
