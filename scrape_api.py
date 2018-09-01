@@ -2,12 +2,13 @@ import json
 import os
 import random
 import re
+import requests
+import shutil
 import sys
-from urllib.request import Request
-import urllib.request
 from utillib import load_json
 from utillib import load_list
 
+rcounter = 1
 
 def scrape_image(ids):
     while True:
@@ -31,16 +32,14 @@ def get_artworks():
     page = random.randint(1,10)
 
     try:
-        request = Request("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+sorting, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urllib.request.urlopen(request)
-    except urllib.error.HTTPError as err:
+        response = requests.get("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+sorting, headers={"User-Agent": "Mozilla/5.0"})
+    except requests.HTTPError as err:
         print(err)
-        exit()
+        exit()  
 
-    with response as r:
-        return json.load(r)   
+    return response.json()
 # ---------------------- #
-def validate_image(artwork, ids, blacklist, r_dir, process_tags):
+def validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags):
     bad_categories = ["Animation", "Architecture", "Architectural Visualization", "Comic Art", 
                         "Creatures", "Fantasy", "Game Art", "Industrial Design", 
                         "Motion Graphics", "Product Design", "Props", 
@@ -49,37 +48,23 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
                         "Weapons", "Whimsical"]
 
     # load the artwork's .json
-    request = Request("https://www.artstation.com/projects/" + artwork["hash_id"] + ".json", headers={'User-Agent': 'Mozilla/5.0'})
-    response = urllib.request.urlopen(request)   
-
-    with response as r:
-        info = json.load(r)    
+    response = requests.get("https://www.artstation.com/projects/" + artwork["hash_id"] + ".json", headers={'User-Agent': 'Mozilla/5.0'}) 
+    info = response.json()
 
     for category in info["categories"]:
         if category["name"] in bad_categories:
-
-            _file = open(r_dir+"permalinks.txt", "a")
-            _file.write(artwork["permalink"] + "\n")
-
-            title = re.sub('[^A-Za-z0-9]+', '_', artwork["title"].lower())
-            urllib.request.urlretrieve(info["assets"][0]["image_url"], r_dir + title + ".jpg")
+            
+            download_artwork(info, r_dir, rcounter, ids)
 
             if process_tags: 
                 add_tags("./output/bad_tags", info)
-
-            ids[artwork["hash_id"]] = artwork["id"]
 
             print ("Bad artwork.")
             return False, info    
 
     if info["adult_content"]:
-        ids[artwork["hash_id"]] = artwork["id"]
-
-        _file = open(r_dir+"permalinks.txt", "a")
-        _file.write(artwork["permalink"] + "\n")
-
-        title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
-        urllib.request.urlretrieve(info["assets"][0]["image_url"], r_dir + title + ".jpg")
+        download_artwork(info, r_dir, rcounter, ids)
+        rcounter+=1
 
         print ("Bad artwork.")
         return False, info
@@ -88,13 +73,7 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
 
     for tag in tags:
         if tag in blacklist:
-            ids[artwork["hash_id"]] = artwork["id"]
-
-            _file = open(r_dir+"permalinks.txt", "a")
-            _file.write(artwork["permalink"] + "\n")
-
-            title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
-            urllib.request.urlretrieve(info["assets"][0]["image_url"], r_dir + title + ".jpg")
+            download_artwork(info, r_dir, rcounter, ids)
 
             if process_tags: 
                 add_tags("./output/bad_tags", info)
@@ -105,10 +84,19 @@ def validate_image(artwork, ids, blacklist, r_dir, process_tags):
     print("Artwork validated.")
     return True, info
 # ---------------------- #
-def add_download_opener():
-    opener=urllib.request.build_opener()
-    opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
-    urllib.request.install_opener(opener)
+def download_artwork(info, directory, counter, ids):
+        ids[info["hash_id"]] = info["id"]
+
+        _file = open(directory+"permalinks.txt", "a")
+        _file.write(info["permalink"] + "\n")
+
+        response = requests.get(info["assets"][0]["image_url"], stream=True)
+
+        title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
+        artist = re.sub('[^A-Za-z0-9]+', '_', info["user"]["full_name"].lower())
+        
+        with open(directory+str(counter)+"_"+artist+"-"+title+".jpg", "wb") as dl:
+            shutil.copyfileobj(response.raw, dl)
 # ---------------------- # 
 def get_tags(artinfo):
     return [tag.lower().strip('#') for tag in artinfo["tags"]]

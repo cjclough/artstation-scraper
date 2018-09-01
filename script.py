@@ -4,43 +4,41 @@ from utillib import *
 from time import sleep
 
 ### setup ###
-
 run_dir = input("Enter name of test directory: ")
+
 # make directories 
 main_dir = ("./tests/"+run_dir+"/")
 a_dir = make_dir(main_dir+"accepted/")
 r_dir = make_dir(main_dir+"rejected/")
 output_dir = make_dir("./output/")
 ids = load_json(output_dir+"scraped")
-add_download_opener()
 
 ### main ###
 def main():
-    counter = 1
+    gcounter = 1
+    rcounter = 1
     process_tags = False
     parse_tags = False
     blacklist = load_list(output_dir+"blacklist")
     
     while True:
-        valid = False
+        artwork = scrape_image(ids)
+        valid, info = validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags) 
         while not valid:
+            rcounter+=1
             artwork = scrape_image(ids)
-            valid, info = validate_image(artwork, ids, blacklist, r_dir, process_tags) 
+            valid, info = validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags) 
 
         with open(a_dir + "permalinks.txt", 'a') as f:
             f.write(artwork["permalink"] + "\n")
 
-        artist = re.sub('[^A-Za-z0-9]+', '_', info["user"]["full_name"].lower())
-        title = re.sub('[^A-Za-z0-9]+', '_', info["title"].lower())
-        urllib.request.urlretrieve(info["assets"][0]["image_url"], a_dir+str(counter)+"_"+artist+"-"+title+".jpg")
-        counter += 1
+        download_artwork(info, a_dir, gcounter, ids)
+        gcounter+=1
 
-        ids[artwork["hash_id"]] = artwork["id"]
-        
         if process_tags:
             add_tags(output_dir+"good_tags", info)
         
-        sleep(500)
+        sleep(5)
 
 if __name__ == "__main__":
     try:
