@@ -20,17 +20,15 @@ def main():
     process_tags = False
     parse_tags = False
     blacklist = load_list(output_dir+"blacklist")
-    
+    greenlist = load_list(output_dir+"greenlist")
+
     while True:
         artwork = scrape_image(ids)
-        valid, info = validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags) 
+        valid, info = validate_image(artwork, ids, greenlist, blacklist, r_dir, rcounter, process_tags) 
         while not valid:
             rcounter+=1
             artwork = scrape_image(ids)
-            valid, info = validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags) 
-
-        with open(a_dir + "permalinks.txt", 'a') as f:
-            f.write(artwork["permalink"] + "\n")
+            valid, info = validate_image(artwork, ids, greenlist, blacklist, r_dir, rcounter, process_tags) 
 
         download_artwork(info, a_dir, gcounter, ids)
         gcounter+=1
@@ -38,7 +36,7 @@ def main():
         if process_tags:
             add_tags(output_dir+"good_tags", info)
         
-        sleep(5)
+        sleep(300)
 
 if __name__ == "__main__":
     try:

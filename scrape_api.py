@@ -32,24 +32,30 @@ def get_artworks():
     page = random.randint(1,10)
 
     try:
-        response = requests.get("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+sorting, headers={"User-Agent": "Mozilla/5.0"})
+        response = requests.get("https://www.artstation.com/projects.json?category="+category+"&medium=digital2d&page="+str(page)+sorting)
     except requests.HTTPError as err:
         print(err)
         exit()  
 
     return response.json()
 # ---------------------- #
-def validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags):
+def validate_image(artwork, ids, greenlist, blacklist, r_dir, rcounter, process_tags):
     bad_categories = ["Animation", "Architecture", "Architectural Visualization", "Comic Art", 
                         "Creatures", "Fantasy", "Game Art", "Industrial Design", 
                         "Motion Graphics", "Product Design", "Props", 
                         "Textures \u0026 Materials", "Transport \u0026 Vehicles", 
-                        "Tutorial", "User Interface", "Visual Effects", 
-                        "Weapons", "Whimsical"]
+                        "Tutorial", "User Interface", "Visual Effects", "Whimsical"]
 
     # load the artwork's .json
-    response = requests.get("https://www.artstation.com/projects/" + artwork["hash_id"] + ".json", headers={'User-Agent': 'Mozilla/5.0'}) 
+    response = requests.get("https://www.artstation.com/projects/" + artwork["hash_id"] + ".json") 
     info = response.json()
+
+    tags = get_tags(info)
+
+    for tag in tags:
+        if tag in greenlist:
+            print("Artwork validated.")
+            return True, info
 
     for category in info["categories"]:
         if category["name"] in bad_categories:
@@ -68,8 +74,6 @@ def validate_image(artwork, ids, blacklist, r_dir, rcounter, process_tags):
 
         print ("Bad artwork.")
         return False, info
-
-    tags = get_tags(info)
 
     for tag in tags:
         if tag in blacklist:
@@ -105,7 +109,7 @@ def add_tags(filename, artinfo):
     j_tags = load_json(filename)
     
     # get the tags
-    a_tags = [tag.lower().strip('#') for tag in artinfo["tags"]]
+    a_tags = get_tags(artinfo)
 
     for tag in a_tags:
         if tag in j_tags:
